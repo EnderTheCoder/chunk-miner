@@ -1,3 +1,5 @@
+import * as process from "process";
+
 const mineflayer = require("mineflayer")
 const {pathfinder, goals, Movements} = require("mineflayer-pathfinder")
 const bot = mineflayer.createBot({
@@ -46,10 +48,11 @@ bot.on("chat", async (username, message) => {
 
             case "stop": {
                 bot.chat("stopped")
-                botState = "resting"
-                bot.stopDigging()
-                bot.pathfinder.stop()
-                bot.pathfinder.setGoal(null)
+                // botState = "resting"
+                // bot.stopDigging()
+                // bot.pathfinder.stop()
+                // bot.pathfinder.setGoal(null)
+                process.exit(0)
                 break
             }
 
@@ -87,19 +90,21 @@ async function go() {
 
     const digGoal = new goals.GoalGetToBlock(target.x, target.y, target.z)
     const digMovement = new Movements(bot, minecraftData)
+    await bot.equip(bot.pathfinder.bestHarvestTool(bot.blockAt(target)), "hand")
+
     await bot.pathfinder.setMovements(digMovement)
     await bot.pathfinder.goto(digGoal)
 }
 
 async function dig() {
-    console.log(target)
+    // console.log(target)
     console.log(bot.world.getBlock(target))
     await bot.dig(bot.world.getBlock(target))
 }
 
-function vec3Prefix(number) {
-    return number > 0 ? number - 1 : number + 1
-}
+// function vec3Prefix(number) {
+//     return number > 0 ? number - 1 : number + 1
+// }
 
 /*WARNING: YOU ARE NOT EXPECTED TO UNDERSTAND THIS
 * true is real to fake, false is fake to real
@@ -119,9 +124,9 @@ function magicVec3Transfer(startPos, endPos, inputPos, type) {
 
 
 async function searchChunk(nowPos, startPos, endPos) {
-    console.log("start", startPos)
-    console.log("end", endPos)
-    console.log("now", nowPos)
+    // console.log("start", startPos)
+    // console.log("end", endPos)
+    // console.log("now", nowPos)
 
     let magicStartPos = magicVec3Transfer(startPos, endPos, startPos, true),
         magicEndPos = magicVec3Transfer(startPos, endPos, endPos, true),
@@ -143,7 +148,7 @@ async function searchChunk(nowPos, startPos, endPos) {
                     // pathfinder.safeToBreak(bot.blockAt(nowPos))
                 ) {
                     console.log("Target Found")
-                    console.log(nowPos)
+                    // console.log(nowPos)
                     target = nowPos
                     return nowPos
                 }
