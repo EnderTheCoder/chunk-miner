@@ -1,7 +1,8 @@
 import {Vec3} from "vec3";
 import {goals, Movements, pathfinder} from "mineflayer-pathfinder";
-
+const autoEat = require('mineflayer-auto-eat')
 const mineflayer = require("mineflayer")
+import {BotInventory} from "./BotInventory";
 
 export class Miner {
 
@@ -10,6 +11,15 @@ export class Miner {
     mcData
     garbageList
     state
+    supplyPos
+    dischargePos
+
+    supplyAmount = {
+        food: 64,
+        pickaxe: 5,
+        axe: 1,
+        ladder: 64,
+    }
 
     constructor(botData) {
         this.bot = mineflayer.createBot(botData)
@@ -19,10 +29,39 @@ export class Miner {
         ]
         this.bot.loadPlugin(pathfinder)
         this.state = "resting"
+
+        this.bot.loadPlugin(autoEat)
+        this.bot.autoEat.
+        this.bot.autoEat.options = {
+            priority: 'foodPoints',
+            startAt: 14,
+            bannedFood: []
+        }
+        this.bot.on("autoeat_started", async () => {
+
+            if(!await this.inventoryCheck("food")) await this.goGetSupply()
+            console.log("Auto Eat started!")
+        })
+
+    }
+
+    public setSupplyPos(supplyPos) {
+        this.supplyPos = supplyPos
+    }
+
+    public setDischargePos(dischargePos) {
+        this.dischargePos = dischargePos
     }
 
     public async digBlock() {
-        await this.bot.dig(this.targetBlock)
+
+        if (!await this.inventoryCheck("tools")) await this.goGetSupply()
+
+        try {
+            await this.bot.dig(this.targetBlock)
+        } catch (e) {
+            if (e.message != "Digging aborted") throw e
+        }
     }
 
     private isBlockReferencable(block, offsetX, offsetY, offsetZ) {
@@ -99,7 +138,7 @@ export class Miner {
         if (this.targetBlock.name == "lava" || this.targetBlock.name == "water") {
             await this.goNearTargetBlock()
             await this.fillLiquid()
-            success(target)
+            unsafe(target)
             return
         } else if (this.bot.canDigBlock(this.targetBlock)) {
             const safeDigMovement = new Movements(this.bot, this.mcData)
@@ -114,6 +153,53 @@ export class Miner {
             blackList(target)
         }
     }
+
+
+
+    public async inventoryCheck(supplyItemName) {
+        let inventory = new BotInventory(this.bot)
+        switch (supplyItemName) {
+            case "tools": {
+                if (inventory.countAxe() == 0) return false
+                if (inventory.countPickaxe() == 0) return false
+                if (inventory.countShovel() == 0) return false
+                break
+            }
+            case "food": {
+                if (inventory.countFood() == 0) return false
+                break
+            }
+            case "ladder": {
+                if (inventory.countItem("ladder") == 0) return false
+                break
+            }
+        }
+        return true
+    }
+
+    public async goChest(target) {
+        const chestGoal = new goals.GoalGetToBlock(target.x, target.y, target.z)
+        const chestMovement = new Movements(this.bot, this.mcData)
+        chestMovement.scafoldingBlocks = []
+        this.bot.pathfinder.setMovements(chestMovement)
+        await this.bot.pathfinder.goto(chestGoal)
+    }
+
+    public async goDischarge() {
+        await this.goChest(this.dischargePos)
+
+
+    }
+
+    public async goGetSupply() {
+
+        await this.goDischarge()
+
+        await this.goChest(this.supplyPos)
+
+
+    }
+
 
     public async follow(playerName) {
         const followGoal = new goals.GoalFollow(this.bot.players[playerName].entity, 1)

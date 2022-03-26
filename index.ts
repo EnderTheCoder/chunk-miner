@@ -19,6 +19,7 @@ let target
 
 bot.once("spawn", async () => {
     bot.waitForChunksToLoad().then(() => {
+        console.log(minecraftData.foodsArray)
     })
 
 })
@@ -47,12 +48,17 @@ bot.on("chat", async (username, message) => {
             }
 
             case "stop": {
-                bot.chat("stopped")
-                // botState = "resting"
-                // bot.stopDigging()
-                // bot.pathfinder.stop()
-                // bot.pathfinder.setGoal(null)
-                process.exit(0)
+                try {
+                    bot.chat("stopped")
+                    botState = "resting"
+                    bot.stopDigging()
+                    bot.pathfinder.stop()
+                    bot.pathfinder.setGoal(null)
+
+                } catch (e) {
+                    console.warn(e)
+                }
+                // process.exit(0)
                 break
             }
 
@@ -99,7 +105,12 @@ async function go() {
 async function dig() {
     // console.log(target)
     console.log(bot.world.getBlock(target))
-    await bot.dig(bot.world.getBlock(target))
+    try {
+        await bot.dig(bot.world.getBlock(target))
+
+    } catch (e) {
+        console.log(e)
+    }
 }
 
 /*WARNING: YOU ARE NOT EXPECTED TO UNDERSTAND THIS
