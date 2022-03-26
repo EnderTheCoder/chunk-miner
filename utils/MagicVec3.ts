@@ -1,11 +1,11 @@
 import {Vec3} from "vec3";
 
-class MagicVec3 {
+export class MagicVec3 {
 
     private readonly originalVec3
     private readonly magicVec3
-    private startPos
-    private endPos
+    private readonly startPos
+    private readonly endPos
 
     /*WARNING: YOU ARE NOT EXPECTED TO UNDERSTAND THIS
     * type:true is original to magic, type:false is magic to original
@@ -39,4 +39,13 @@ class MagicVec3 {
     public getMagic() {
         return this.magicVec3
     }
+
+    public getStartPos() {
+        return this.startPos
+    }
+
+    public getEndPos() {
+        return this.endPos
+    }
+
 }

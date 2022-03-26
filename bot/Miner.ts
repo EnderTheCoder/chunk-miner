@@ -6,22 +6,34 @@ import {BotInventory} from "./BotInventory";
 
 export class Miner {
 
+    id: number
     bot
     targetBlock
     mcData
     garbageList
     state
-    supplyPos
+    supplyPos = {
+        food: null,
+        pickaxe: null,
+        axe: null,
+        shovel: null,
+        ladder: null,
+    }
     dischargePos
 
     supplyAmount = {
         food: 64,
         pickaxe: 5,
         axe: 1,
+        shovel: 2,
         ladder: 64,
     }
 
-    constructor(botData) {
+    isLadderBuilder
+
+    isCheatPlacingEnabled
+
+    constructor(botData, id) {
         this.bot = mineflayer.createBot(botData)
         this.mcData = require("minecraft-data")(this.bot.version)
         this.garbageList = [
@@ -42,11 +54,21 @@ export class Miner {
             if(!await this.inventoryCheck("food")) await this.goGetSupply()
             console.log("Auto Eat started!")
         })
-
+        this.isLadderBuilder = false
+        this.isCheatPlacingEnabled = true
+        this.id = id
     }
 
-    public setSupplyPos(supplyPos) {
-        this.supplyPos = supplyPos
+    public setLadderBuilder() {
+        this.isLadderBuilder = !this.isLadderBuilder
+    }
+
+    public setCheatPlacing() {
+        this.isCheatPlacingEnabled = !this.isCheatPlacingEnabled
+    }
+
+    public setSupplyPos(supplyPos, supplyType) {
+        this.supplyPos[supplyType] = supplyPos
     }
 
     public setDischargePos(dischargePos) {
@@ -188,6 +210,17 @@ export class Miner {
     public async goDischarge() {
         await this.goChest(this.dischargePos)
 
+        let inventory = new BotInventory(this.bot)
+        for (let slot of this.bot.inventory.slots) {
+            if (
+                slot != null &&
+                !slot.name.contains("_shovel") &&
+                !slot.name.contains("_pickaxe") &&
+                !slot.name.contains("_axe") &&
+                !inventory.isFood(slot) &&
+                slot.type != this.mcData.itemsByName.ladder.id
+            ) await inventory.inventoryToContainer(this.bot.blockAt(this.dischargePos), slot.type, inventory.countItem(slot.name))
+        }
 
     }
 
@@ -195,8 +228,45 @@ export class Miner {
 
         await this.goDischarge()
 
-        await this.goChest(this.supplyPos)
+        let inventory = new BotInventory(this.bot)
+        for (let key in this.supplyPos) {
 
+            if (key != "ladder" || !this.isLadderBuilder) await this.goChest(this.supplyPos[key])
+
+            let supplyType
+
+            switch (key) {
+                case "pickaxe": {
+                    supplyType = await inventory.getPickaxeType(this.bot.blockAt(this.supplyPos[key]))
+                    break
+                }
+
+                case "axe": {
+                    supplyType = await inventory.getAxeType(this.bot.blockAt(this.supplyPos[key]))
+
+                    break
+                }
+
+                case "shovel": {
+                    supplyType = await inventory.getShovelType(this.bot.blockAt(this.supplyPos[key]))
+                    break
+                }
+
+                case "food": {
+                    supplyType = await inventory.getFoodType(this.bot.blockAt(this.supplyPos[key]))
+
+                    break
+                }
+
+                case "ladder": {
+                    supplyType = this.mcData.itemsByName.ladder.id
+                    break
+                }
+            }
+            await inventory.containerToInventory(this.bot.blockAt(this.supplyPos[key]), supplyType, this.supplyAmount[key])
+
+
+        }
 
     }
 
