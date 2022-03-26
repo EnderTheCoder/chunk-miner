@@ -102,10 +102,6 @@ async function dig() {
     await bot.dig(bot.world.getBlock(target))
 }
 
-// function vec3Prefix(number) {
-//     return number > 0 ? number - 1 : number + 1
-// }
-
 /*WARNING: YOU ARE NOT EXPECTED TO UNDERSTAND THIS
 * true is real to fake, false is fake to real
 * */
