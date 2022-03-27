@@ -18,7 +18,8 @@ export default class Miner {
     targetBlock: Block
     mcData
     garbageList: Array<string> = [
-        "cobblestone"
+        "cobblestone",
+        "dirt",
     ]
     state: string = "resting"
     supplyPos = {
@@ -177,13 +178,17 @@ export default class Miner {
         let reference = this.findReferencableBlock()
         let inventory = new BotInventory(this.bot)
 
-        for (let i = 0; i < this.garbageList.length; i++) {
-            if (inventory.countItem(this.garbageList[i]) > 0) {
-                await this.bot.equip(this.mcData.itemsByName[this.garbageList[i]], "hand")
-                break
-            }
+        // for (let i = 0; i < this.garbageList.length; i++) {
+        //     if (inventory.countItem(this.garbageList[i]) > 0) {
+        //         await this.bot.equip(this.mcData.itemsByName[this.garbageList[i]], "hand")
+        //         break
+        //     }
+        // }
+        try {
+            await this.bot.placeBlock(reference.referenceBlock, reference.faceVector)
+        } catch (e) {
+            console.warn(e)
         }
-        await this.bot.placeBlock(reference.referenceBlock, reference.faceVector)
     }
 
     public async goNearTargetBlock() {
@@ -216,13 +221,12 @@ export default class Miner {
 
     public async handleBlock() {
 
-
-        if (this.bot.blockAt(this.targetPos) == null) {
+        if (await this.taskManagerBelongTo.globalBlockVersion(this.targetPos) == null) {
             console.log(this.id + "null")
             await this.goNearChunk()
         }
 
-        this.targetBlock = this.bot.blockAt(this.targetPos)
+        this.targetBlock = await this.taskManagerBelongTo.globalBlockVersion(this.targetPos)
 
         if (this.targetBlock.name != "air") {
             console.log(this.targetBlock)

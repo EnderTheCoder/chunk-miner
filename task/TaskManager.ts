@@ -1,6 +1,7 @@
 import MagicVec3 from "../utils/MagicVec3"
 import Miner from "../bot/Miner";
 import MinerChunk from "../chunk/MinerChunk";
+import {Vec3} from "vec3";
 
 const mineflayer = require("mineflayer")
 
@@ -37,6 +38,8 @@ export default class TaskManager {
             this.position.getMagic().y--
             this.position.getMagic().x = this.position.getMagicEndPos().x
             this.position.getMagic().z = this.position.getMagicEndPos().z
+
+            console.log("level:" + this.position.getMagic().y)
         } else if (this.position.getMagic().z == this.position.getMagicStartPos().z) {
             this.position.getMagic().x--
             this.position.getMagic().z = this.position.getMagicEndPos().z
@@ -80,6 +83,14 @@ export default class TaskManager {
     public async complete() {
         console.log('Task Completed at CHUNK(' + this.chunk.getX() + ', ' + this.chunk.getZ() + ')')
 
+    }
+
+    public async globalBlockVersion(pos: Vec3) {
+        for (let miner of this.minerList) {
+            let block = miner.bot.blockAt(pos)
+            if (block != null) return block
+        }
+        return null
     }
 
     public async stop() {

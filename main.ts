@@ -16,7 +16,7 @@ async function main() {
     //add a bot to the task and run the task
 
     let botManager = new BotManager()
-    let miners = await botManager.createOfflineBots("ender_bot_", 5, "localhost")
+    let miners = await botManager.createOfflineBots("ender_bot_", 10, "localhost")
 
 
 

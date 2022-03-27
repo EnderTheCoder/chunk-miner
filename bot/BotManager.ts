@@ -15,7 +15,7 @@ export default class BotManager {
     }
 
     public async moveToNewChunk(chunk: MinerChunk, bot: Miner) {
-        await bot.goNearChunk(chunk.startPos)
+        await bot.goNearChunk()
     }
 
 
