@@ -1,4 +1,4 @@
-export class BotInventory {
+export default class BotInventory {
 
     bot
     mcData
@@ -6,6 +6,10 @@ export class BotInventory {
         this.bot = bot
         this.mcData = require("minecraft-data")(this.bot.version)
 
+    }
+
+   private contains(str1, str2) {
+        return str1.search(str2) != -1
     }
 
     public getSlot() {
@@ -16,7 +20,7 @@ export class BotInventory {
         let slots = this.getSlot()
         let count = 0
         for (let i = 0; i < slots.length; i++) {
-            if (slots[i] != null && slots[i].name.contains("_pickaxe")) count++
+            if (slots[i] != null && this.contains(slots[i].name, "_pickaxe")) count++
         }
         return count
     }
@@ -25,7 +29,7 @@ export class BotInventory {
         let slots = this.getSlot()
         let count = 0
         for (let i = 0; i < slots.length; i++) {
-            if (slots[i] != null && slots[i].name.contains("_axe")) count++
+            if (slots[i] != null && this.contains(slots[i].name, "_axe")) count++
         }
         return count
     }
@@ -34,14 +38,13 @@ export class BotInventory {
         let slots = this.getSlot()
         let count = 0
         for (let i = 0; i < slots.length; i++) {
-            if (slots[i] != null && slots[i].name.contains("_shovel")) count++
+            if (slots[i] != null && this.contains(slots[i].name, "_shovel")) count++
         }
         return count
     }
 
     public countFood() {
         let slots = this.getSlot()
-        let foods = this.mcData.foodsArray
 
         let count = 0
 

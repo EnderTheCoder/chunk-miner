@@ -1,17 +1,26 @@
 import {Vec3} from "vec3";
 import {goals, Movements, pathfinder} from "mineflayer-pathfinder";
-const autoEat = require('mineflayer-auto-eat')
-const mineflayer = require("mineflayer")
-import {BotInventory} from "./BotInventory";
 
-export class Miner {
+const mineflayer = require("mineflayer")
+import {Bot} from "mineflayer"
+import {Block} from "prismarine-block"
+import BotInventory from "./BotInventory";
+import TaskManager from "../task/TaskManager";
+
+const autoeat = require("mineflayer-auto-eat")
+// import {MagicVec3} from "../utils/MagicVec3";
+
+export default class Miner {
 
     id: number
-    bot
-    targetBlock
+    bot: Bot
+
+    targetBlock: Block
     mcData
-    garbageList
-    state
+    garbageList: Array<string> = [
+        "cobblestone"
+    ]
+    state: string = "resting"
     supplyPos = {
         food: null,
         pickaxe: null,
@@ -29,34 +38,76 @@ export class Miner {
         ladder: 64,
     }
 
+    taskManagerBelongTo
+
     isLadderBuilder
 
     isCheatPlacingEnabled
 
+    timerID
+
     constructor(botData, id) {
+
         this.bot = mineflayer.createBot(botData)
-        this.mcData = require("minecraft-data")(this.bot.version)
-        this.garbageList = [
-            "cobblestone"
-        ]
-        this.bot.loadPlugin(pathfinder)
-        this.state = "resting"
 
-        this.bot.loadPlugin(autoEat)
-        this.bot.autoEat.
-        this.bot.autoEat.options = {
-            priority: 'foodPoints',
-            startAt: 14,
-            bannedFood: []
-        }
-        this.bot.on("autoeat_started", async () => {
-
-            if(!await this.inventoryCheck("food")) await this.goGetSupply()
-            console.log("Auto Eat started!")
+        this.bot.on("inject_allowed", () => {
+            this.mcData = require("minecraft-data")(this.bot.version)
         })
+
+        this.bot.loadPlugin(pathfinder)
+
+
+        this.bot.once("spawn", async () => {
+
+            console.log("Bot " + id + " spawned")
+
+
+            this.timerID = setInterval(
+                () => {
+
+                    if (this.state == "preparing") {
+                        this.handleBlock()
+                    }
+                }, 5)
+        })
+
+        this.bot.once("end",  async (reason) => {
+            console.log("Bot " + this.id + " is dead. Reason: " + reason)
+            this.kill()
+        })
+
+        this.bot.on("chat", (username, message) => {
+            if (message == "state") this.bot.chat(this.state)
+        })
+        // this.bot.loadPlugin(autoeat)
+        // // this.bot.autoEat.options = {
+        // //     priority: 'foodPoints',
+        // //     startAt: 14,
+        // //     bannedFood: []
+        // // }
+        // this.bot.once("spawn", () => {
+        //     this.bot.autoeat.options.priority = "foodPoints"
+        //     this.bot.autoEat.options.bannedFood = []
+        //     this.bot.autoEat.options.eatingTimeout = 3
+        // })
+        // this.bot.on("autoeat_started", async () => {
+        //
+        //     if(!await this.inventoryCheck("food")) await this.goGetSupply()
+        //     console.log("Auto Eat started!")
+        // })
         this.isLadderBuilder = false
         this.isCheatPlacingEnabled = true
         this.id = id
+    }
+    targetPos: Vec3
+
+    public setTarget(targetPos: Vec3) {
+        this.targetPos = targetPos
+        this.state = "preparing"
+    }
+
+    public linkTaskManager(task: TaskManager) {
+        this.taskManagerBelongTo = task
     }
 
     public setLadderBuilder() {
@@ -76,109 +127,139 @@ export class Miner {
     }
 
     public async digBlock() {
-
         if (!await this.inventoryCheck("tools")) await this.goGetSupply()
-
+        this.state = "digging"
         try {
-            await this.bot.dig(this.targetBlock)
+            await this.bot.dig(this.targetBlock).finally()
         } catch (e) {
-            if (e.message != "Digging aborted") throw e
+            console.warn(e)
         }
     }
 
     private isBlockReferencable(block, offsetX, offsetY, offsetZ) {
-        return this.bot.blockAt(block.position.offset(offsetX, offsetY, offsetZ)) != "air" &&
-            this.bot.blockAt(block.position.offset(offsetX, offsetY, offsetZ)) != "lava" &&
-            this.bot.blockAt(block.position.offset(offsetX, offsetY, offsetZ)) != "water"
+        return this.bot.blockAt(block.position.offset(offsetX, offsetY, offsetZ)).name != "air" &&
+            this.bot.blockAt(block.position.offset(offsetX, offsetY, offsetZ)).name != "lava" &&
+            this.bot.blockAt(block.position.offset(offsetX, offsetY, offsetZ)).name != "water"
     }
 
-    public async fillLiquid() {
-
+    public findReferencableBlock() {
         let referenceBlock
         let faceVector
         if (this.isBlockReferencable(this.targetBlock, 1, 0, 0)) {
             referenceBlock = this.bot.blockAt(this.targetBlock.position.offset(1, 0, 0))
             faceVector = new Vec3(-1, 0, 0)
-        } else
-        if (this.isBlockReferencable(this.targetBlock, -1, 0, 0)) {
+        } else if (this.isBlockReferencable(this.targetBlock, -1, 0, 0)) {
             referenceBlock = this.bot.blockAt(this.targetBlock.position.offset(-1, 0, 0))
             faceVector = new Vec3(1, 0, 0)
-        } else
-        if (this.isBlockReferencable(this.targetBlock, 0, 1, 0)) {
+        } else if (this.isBlockReferencable(this.targetBlock, 0, 1, 0)) {
             referenceBlock = this.bot.blockAt(this.targetBlock.position.offset(0, 1, 0))
             faceVector = new Vec3(0, -1, 0)
-        } else
-        if (this.isBlockReferencable(this.targetBlock, 0, -1, 0)) {
+        } else if (this.isBlockReferencable(this.targetBlock, 0, -1, 0)) {
             referenceBlock = this.bot.blockAt(this.targetBlock.position.offset(0, -1, 0))
             faceVector = new Vec3(0, 1, 0)
-        } else
-        if (this.isBlockReferencable(this.targetBlock, 0, 0, 1)) {
+        } else if (this.isBlockReferencable(this.targetBlock, 0, 0, 1)) {
             referenceBlock = this.bot.blockAt(this.targetBlock.position.offset(0, 0, 1))
             faceVector = new Vec3(0, 0, -1)
-        } else
-        if (this.isBlockReferencable(this.targetBlock, 0, 0, -1)) {
+        } else if (this.isBlockReferencable(this.targetBlock, 0, 0, -1)) {
             referenceBlock = this.bot.blockAt(this.targetBlock.position.offset(0, 0, -1))
             faceVector = new Vec3(0, 0, 1)
+        } else {
+            referenceBlock = this.bot.blockAt(this.targetBlock.position.offset(1, 0, 0))
+            faceVector = new Vec3(-1, 0, 0)
+            console.warn("WARNING: No legal reference block found. Use illegal block instead. This might cause error or ban.")
         }
 
+        return {referenceBlock: referenceBlock, faceVector: faceVector}
+    }
+
+    public async fillLiquid() {
+
+        let reference = this.findReferencableBlock()
+        let inventory = new BotInventory(this.bot)
+
         for (let i = 0; i < this.garbageList.length; i++) {
-            await this.bot.equip(this.mcData.itemsByName[this.garbageList[i]], "hand")
+            if (inventory.countItem(this.garbageList[i]) > 0) {
+                await this.bot.equip(this.mcData.itemsByName[this.garbageList[i]], "hand")
+                break
+            }
         }
-        await this.bot.placeBlock(referenceBlock, faceVector)
+        await this.bot.placeBlock(reference.referenceBlock, reference.faceVector)
     }
 
     public async goNearTargetBlock() {
+        this.state = "moving"
         try {
-            const digGoal = new goals.GoalLookAtBlock(this.targetBlock.position, this.bot.world, {reach: 4})
-            const digMovement = new Movements(this.bot, this.mcData)
-            await this.bot.equip(this.bot.pathfinder.bestHarvestTool(this.targetBlock), "hand")
-            await this.bot.pathfinder.setMovements(digMovement)
-            await this.bot.pathfinder.goto(digGoal)
-        } catch (e) {
             const digGoal = new goals.GoalGetToBlock(this.targetBlock.position.x, this.targetBlock.position.y, this.targetBlock.position.z)
             const digMovement = new Movements(this.bot, this.mcData)
             await this.bot.equip(this.bot.pathfinder.bestHarvestTool(this.targetBlock), "hand")
             await this.bot.pathfinder.setMovements(digMovement)
             await this.bot.pathfinder.goto(digGoal)
+        } catch (e) {
+            const digGoal = new goals.GoalLookAtBlock(this.targetBlock.position, this.bot.world, {reach: 4})
+            const digMovement = new Movements(this.bot, this.mcData)
+            await this.bot.equip(this.bot.pathfinder.bestHarvestTool(this.targetBlock), "hand")
+            await this.bot.pathfinder.setMovements(digMovement)
+            await this.bot.pathfinder.goto(digGoal)
         }
     }
 
-    public async goNearChunk(target) {
-        const nearGoal = new goals.GoalNearXZ(target, this.bot.world, 16)
+    public async goNearChunk() {
+        this.state = "moving"
+        console.log(this.taskManagerBelongTo.chunk.endPos.x, this.taskManagerBelongTo.chunk.endPos.z)
+        const nearGoal = new goals.GoalNearXZ(this.taskManagerBelongTo.chunk.endPos.x, this.taskManagerBelongTo.chunk.endPos.z, 4)
+        // console.log(this.mcData)
         const nearMovement = new Movements(this.bot, this.mcData)
         await this.bot.pathfinder.setMovements(nearMovement)
         await this.bot.pathfinder.goto(nearGoal)
+        console.log("near")
     }
 
-    public async handleBlock(target, success: (target) => void, blackList: (target) => void, unsafe: (target) => void) {
-        if (this.bot.blockAt(target) == null) {
-            await this.goNearChunk(target)
+    public async handleBlock() {
+
+
+        if (this.bot.blockAt(this.targetPos) == null) {
+            console.log(this.id + "null")
+            await this.goNearChunk()
         }
 
-        this.targetBlock = this.bot.blockAt(target)
+        this.targetBlock = this.bot.blockAt(this.targetPos)
 
-        if (this.targetBlock.name == "lava" || this.targetBlock.name == "water") {
-            await this.goNearTargetBlock()
-            await this.fillLiquid()
-            unsafe(target)
-            return
-        } else if (this.bot.canDigBlock(this.targetBlock)) {
-            const safeDigMovement = new Movements(this.bot, this.mcData)
-            if (safeDigMovement.safeToBreak(this.targetBlock)) {
+        if (this.targetBlock.name != "air") {
+            console.log(this.targetBlock)
+            if (this.targetBlock.name == "lava" || this.targetBlock.name == "water") {
                 await this.goNearTargetBlock()
-                await this.digBlock()
+                await this.fillLiquid()
+                this.taskManagerBelongTo.chunk.addToUnsafe(this.bot.blockAt(this.targetPos))
                 return
+            } else if (this.targetBlock.diggable) {
+                console.log("dig")
+                if (this.isSafe(this.targetBlock)) {
+                    await this.goNearTargetBlock()
+                    await this.digBlock()
+                    this.taskManagerBelongTo.chunk.dug(this.targetBlock)
+                } else {
+                    this.taskManagerBelongTo.chunk.addToUnsafe(this.targetBlock)
+                }
             } else {
-                unsafe(target)
+                if (this.targetBlock.name != "air") {
+                    this.taskManagerBelongTo.chunk.addToBlacklist(this.targetBlock)
+                    console.log("blacklist")
+                }
             }
-        } else {
-            blackList(target)
         }
+        this.state = "resting"
     }
 
-
+    public async buildLadder(ladderPos: Vec3, vector: Vec3) {
+        this.targetBlock = this.bot.blockAt(ladderPos)
+        await this.goNearTargetBlock()
+        let reference = this.findReferencableBlock()
+        await this.bot.placeBlock(reference.referenceBlock, reference.faceVector)
+    }
 
     public async inventoryCheck(supplyItemName) {
+        this.state = "checkingInventory"
+
         let inventory = new BotInventory(this.bot)
         switch (supplyItemName) {
             case "tools": {
@@ -200,6 +281,7 @@ export class Miner {
     }
 
     public async goChest(target) {
+        this.state = "moving"
         const chestGoal = new goals.GoalGetToBlock(target.x, target.y, target.z)
         const chestMovement = new Movements(this.bot, this.mcData)
         chestMovement.scafoldingBlocks = []
@@ -209,14 +291,14 @@ export class Miner {
 
     public async goDischarge() {
         await this.goChest(this.dischargePos)
-
+        this.state = "discharging"
         let inventory = new BotInventory(this.bot)
         for (let slot of this.bot.inventory.slots) {
             if (
                 slot != null &&
-                !slot.name.contains("_shovel") &&
-                !slot.name.contains("_pickaxe") &&
-                !slot.name.contains("_axe") &&
+                !slot.name.includes("_shovel") &&
+                !slot.name.includes("_pickaxe") &&
+                !slot.name.includes("_axe") &&
                 !inventory.isFood(slot) &&
                 slot.type != this.mcData.itemsByName.ladder.id
             ) await inventory.inventoryToContainer(this.bot.blockAt(this.dischargePos), slot.type, inventory.countItem(slot.name))
@@ -227,11 +309,12 @@ export class Miner {
     public async goGetSupply() {
 
         await this.goDischarge()
-
         let inventory = new BotInventory(this.bot)
         for (let key in this.supplyPos) {
 
             if (key != "ladder" || !this.isLadderBuilder) await this.goChest(this.supplyPos[key])
+
+            this.state = "supplying"
 
             let supplyType
 
@@ -270,15 +353,31 @@ export class Miner {
 
     }
 
+    public getState() {
+        return this.state
+    }
 
     public async follow(playerName) {
+        this.state = "following"
         const followGoal = new goals.GoalFollow(this.bot.players[playerName].entity, 1)
         const followMovement = new Movements(this.bot, this.mcData)
         this.bot.pathfinder.setMovements(followMovement)
-        this.bot.pathfinder.setGoal(followGoal)
+        await this.bot.pathfinder.goto(followGoal)
+        this.state = "resting"
     }
 
-    public async stop() {
+    public isSafe(block): boolean {
+        return new Movements(this.bot, this.mcData).safeToBreak(block)
+    }
 
+    public getBot() {
+        return this.bot
+    }
+
+    public kill() {
+        this.state = "dead"
+        clearInterval(this.timerID)
+        this.bot.quit()
+        this.taskManagerBelongTo.removeMiner(this)
     }
 }

@@ -1,10 +1,9 @@
-import * as process from "process";
 
 const mineflayer = require("mineflayer")
 const {pathfinder, goals, Movements} = require("mineflayer-pathfinder")
 const bot = mineflayer.createBot({
     username: "test",
-    host: "localhost",
+    host: "pix3lpirat3.com",
 })
 const Vec3 = require('vec3').Vec3;
 const minecraftData = require("minecraft-data")("1.18.2")
@@ -20,19 +19,9 @@ let target
 bot.once("spawn", async () => {
     bot.waitForChunksToLoad().then(() => {
             // containerToInventory(bot.blockAt(new Vec3(57, 56, 78)), minecraftData.itemsByName.birch_planks.id, 32)
-
-        console.log(minecraftData.itemsByName.ladder.id, bot.inventory.slots)
+        // console.log(minecraftData.itemsByName.ladder.id, bot.inventory.slots)
     })
-
 })
-
-async function containerToInventory(containerBlock, itemType, count) {
-    let containerWindow = await bot.openContainer(containerBlock)
-    await containerWindow.withdraw(itemType, null, count, null)
-    console.log(containerWindow)
-    console.log(bot.inventory)
-    // bot.inventory.deposit(itemType, null, count, null)
-}
 
 bot.on("chat", async (username, message) => {
 

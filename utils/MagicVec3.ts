@@ -1,8 +1,7 @@
 import {Vec3} from "vec3";
 
-export class MagicVec3 {
+export default class MagicVec3 {
 
-    private readonly originalVec3
     private readonly magicVec3
     private readonly startPos
     private readonly endPos
@@ -24,16 +23,14 @@ export class MagicVec3 {
 
     //input originVec3 to get magicVec3
     constructor(originalVec3, startPos, endPos) {
-        this.originalVec3 = originalVec3
         this.magicVec3 = this.magicVec3Transfer(startPos, endPos, originalVec3, true)
         this.startPos = startPos
         this.endPos = endPos
-
     }
 
 
     public getOriginal() {
-        return this.originalVec3
+        return this.magicVec3Transfer(this.startPos, this.endPos, this.magicVec3, false)
     }
 
     public getMagic() {
@@ -44,8 +41,16 @@ export class MagicVec3 {
         return this.startPos
     }
 
+    public getMagicStartPos() {
+        return this.magicVec3Transfer(this.startPos, this.endPos, this.startPos, true)
+    }
+
     public getEndPos() {
         return this.endPos
+    }
+
+    public getMagicEndPos() {
+        return this.magicVec3Transfer(this.startPos, this.endPos, this.endPos, true)
     }
 
 }
