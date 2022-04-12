@@ -16,9 +16,9 @@ export default class MagicVec3 {
                 inputPos.y,
                 Math.abs(inputPos.z) - Math.abs(startPos.z)) :
             new Vec3(
-                startPos.x > 0 ? 0 + (inputPos.x + Math.abs(startPos.x)) : 0 - (inputPos.x + Math.abs(startPos.x)),
+                startPos.x >= 0 ? 0 + (inputPos.x + Math.abs(startPos.x)) : 0 - (inputPos.x + Math.abs(startPos.x)),
                 inputPos.y,
-                startPos.z > 0 ? 0 + (inputPos.z + Math.abs(startPos.z)) : 0 - (inputPos.z + Math.abs(startPos.z)),)
+                startPos.z >= 0 ? 0 + (inputPos.z + Math.abs(startPos.z)) : 0 - (inputPos.z + Math.abs(startPos.z)),)
     }
 
     //input originVec3 to get magicVec3

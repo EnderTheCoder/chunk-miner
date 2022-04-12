@@ -29,11 +29,7 @@ export default class TaskManager {
         for (let i = 0; i < this.minerList.length; i++) if (miner == this.minerList[i]) this.minerList.splice(i, 1)
     }
 
-    public run() {
-
-        let miner = this.pickUpRestingBot()
-        if (miner == null) return
-
+    public changePos() {
         if (this.position.getMagic().x == this.position.getMagicStartPos().x && this.position.getMagic().z == this.position.getMagicStartPos().z) {
             this.position.getMagic().y--
             this.position.getMagic().x = this.position.getMagicEndPos().x
@@ -44,6 +40,15 @@ export default class TaskManager {
             this.position.getMagic().x--
             this.position.getMagic().z = this.position.getMagicEndPos().z
         } else this.position.getMagic().z--
+    }
+
+
+    public run() {
+
+        let miner = this.pickUpRestingBot()
+        if (miner == null) return
+
+        this.changePos()
 
         // console.log(this.position.getMagic())
 
@@ -58,8 +63,14 @@ export default class TaskManager {
 
     }
 
-    public start() {
+    public getStartPos() {
+        while (this.globalBlockVersion(this.position.getOriginal()) == null || this.globalBlockVersion(this.position.getOriginal()).name == "air") {
+            this.changePos()
+        }
+    }
 
+    public start() {
+        // this.getStartPos()
         this.timerID = setInterval(async () => {
             this.run()
         }, 5)
@@ -85,7 +96,7 @@ export default class TaskManager {
 
     }
 
-    public async globalBlockVersion(pos: Vec3) {
+    public globalBlockVersion(pos: Vec3) {
         for (let miner of this.minerList) {
             let block = miner.bot.blockAt(pos)
             if (block != null) return block

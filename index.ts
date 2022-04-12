@@ -1,168 +1,35 @@
-
-const mineflayer = require("mineflayer")
-const {pathfinder, goals, Movements} = require("mineflayer-pathfinder")
-const bot = mineflayer.createBot({
-    username: "test",
-    host: "pix3lpirat3.com",
-})
-const Vec3 = require('vec3').Vec3;
-const minecraftData = require("minecraft-data")("1.18.2")
+import TaskManager from "./task/TaskManager";
+import MinerChunk from "./chunk/MinerChunk";
+import {Vec3} from "vec3";
+import Miner from "./bot/Miner";
+import BotManager from "./bot/BotManager";
+import MagicVec3 from "./utils/MagicVec3";
 
 
-const ownerName = "EnderTheCoder"
+index().catch(console.error)
 
-bot.loadPlugin(pathfinder)
-
-let botState = "resting"
-let target
-
-bot.once("spawn", async () => {
-    bot.waitForChunksToLoad().then(() => {
-            // containerToInventory(bot.blockAt(new Vec3(57, 56, 78)), minecraftData.itemsByName.birch_planks.id, 32)
-        // console.log(minecraftData.itemsByName.ladder.id, bot.inventory.slots)
-    })
-})
-
-bot.on("chat", async (username, message) => {
-
-    if (username == ownerName) {
-        switch (message) {
-            case "run": {
-                bot.chat("running")
-                botState = "running"
-                bot.waitForChunksToLoad().then(() => {
-                    main()
-                })
-                break
-            }
-
-            case "follow": {
-                botState = "following"
-                bot.chat("following")
-                const followGoal = new goals.GoalFollow(bot.players[ownerName].entity)
-                const followMovement = new Movements(bot, minecraftData)
-                bot.pathfinder.setMovements(followMovement)
-                bot.pathfinder.setGoal(followGoal)
-                break
-            }
-
-            case "stop": {
-                try {
-                    bot.chat("stopped")
-                    botState = "resting"
-                    bot.stopDigging()
-                    bot.pathfinder.stop()
-                    bot.pathfinder.setGoal(null)
-
-                } catch (e) {
-                    console.warn(e)
-                }
-                // process.exit(0)
-                break
-            }
-
-            case "chunk": {
-                console.log(getChunkCorner(bot.entity.position))
-                break
-            }
-
-            case "state": {
-                bot.chat(botState)
-                break
-            }
+// test().finally()
 
 
-        }
+async function index() {
+    //create a new task
+    let task = new TaskManager(new MinerChunk(new Vec3(10, 111, -36)))
+    //add a bot to the task and run the task
 
-    }
+    let botManager = new BotManager()
+    let miners = await botManager.createOfflineBots("ender_bot_", 1, "localhost")
 
-})
 
-async function main() {
-    let cornerPos = getChunkCorner(bot.entity.position)
-    target = cornerPos[1];
-    while (target != cornerPos[0]) {
-        await searchChunk(target, cornerPos[0], cornerPos[1])
-        await go()
-        await dig()
-    }
+
+
+    task.addMiners(miners)
+            .then(() => task.start())
+
 }
 
-
-async function go() {
-
-    if (botState == "resting") bot.pathfinder.stop()
-
-    const digGoal = new goals.GoalGetToBlock(target.x, target.y, target.z)
-    const digMovement = new Movements(bot, minecraftData)
-    await bot.equip(bot.pathfinder.bestHarvestTool(bot.blockAt(target)), "hand")
-
-    await bot.pathfinder.setMovements(digMovement)
-    await bot.pathfinder.goto(digGoal)
-}
-
-async function dig() {
-    // console.log(target)
-    console.log(bot.world.getBlock(target))
-    try {
-        await bot.dig(bot.world.getBlock(target))
-
-    } catch (e) {
-        console.log(e)
-    }
-}
-
-/*WARNING: YOU ARE NOT EXPECTED TO UNDERSTAND THIS
-* true is real to fake, false is fake to real
-* */
-function magicVec3Transfer(startPos, endPos, inputPos, type) {
-
-    return type ?
-        new Vec3(
-            Math.abs(inputPos.x) - Math.abs(startPos.x),
-            inputPos.y,
-            Math.abs(inputPos.z) - Math.abs(startPos.z)) :
-        new Vec3(
-            startPos.x > 0 ? 0 + (inputPos.x + Math.abs(startPos.x)) : 0 - (inputPos.x + Math.abs(startPos.x)),
-            inputPos.y,
-            startPos.z > 0 ? 0 + (inputPos.z + Math.abs(startPos.z)) : 0 - (inputPos.z + Math.abs(startPos.z)),)
-}
-
-
-async function searchChunk(nowPos, startPos, endPos) {
-    // console.log("start", startPos)
-    // console.log("end", endPos)
-    // console.log("now", nowPos)
-
-    let magicStartPos = magicVec3Transfer(startPos, endPos, startPos, true),
-        magicEndPos = magicVec3Transfer(startPos, endPos, endPos, true),
-        magicNowPos = magicVec3Transfer(startPos, endPos, nowPos, true)
-
-    for (; magicNowPos.y >= magicStartPos.y; magicNowPos.y--)
-        for (magicNowPos.x = magicEndPos.x; magicNowPos.x >= magicStartPos.x; magicNowPos.x--)
-            for (magicNowPos.z = magicEndPos.z; magicNowPos.z >= magicStartPos.z; magicNowPos.z--) {
-
-
-                nowPos = magicVec3Transfer(startPos, endPos, magicNowPos, false)
-                // console.log(nowPos)
-                // console.log(bot.world.getBlock(nowPos))
-                if (botState == "resting") return nowPos
-
-                if (
-                    bot.blockAt(nowPos) != null &&
-                    bot.blockAt(nowPos).name != "air"
-                    // pathfinder.safeToBreak(bot.blockAt(nowPos))
-                ) {
-                    console.log("Target Found")
-                    // console.log(nowPos)
-                    target = nowPos
-                    return nowPos
-                }
-            }
-}
-
-function getChunkCorner(pos) {
-    let startPos = new Vec3((pos.x) - pos.x % 16, -64, pos.z - pos.z % 16)
-    let endPos = new Vec3((startPos.x > 0) ? startPos.x + 15 : startPos.x - 15, 128, (startPos.z > 0) ? startPos.z + 15 : startPos.z - 15)
-    return [startPos, endPos]
+async function test() {
+    let chunk = new MinerChunk(new Vec3(2, 1, -2))
+    console.log(chunk.startPos)
+    let magic = new MagicVec3(new Vec3(1, 1, -1), chunk.startPos, chunk.endPos)
+    console.log(magic.getOriginal())
 }

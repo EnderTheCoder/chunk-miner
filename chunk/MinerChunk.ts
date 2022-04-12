@@ -24,9 +24,15 @@ export default class MinerChunk {
 
     }
 
+    // public getChunkCorner(pos: Vec3) {
+    //     return {startPos: new Vec3(pos.x >> 4 << 4, -64, pos.z >> 4 << 4), endPos: new Vec3(pos.x | 15, 128, pos.z | 15)}
+    // }
+
     public getChunkCorner(pos) {
         let startPos = new Vec3((pos.x) - pos.x % 16, -64, pos.z - pos.z % 16)
-        let endPos = new Vec3((startPos.x > 0) ? startPos.x + 15 : startPos.x - 15, 128, (startPos.z > 0) ? startPos.z + 15 : startPos.z - 15)
+        if (pos.x < 0) startPos.x--
+        if (pos.z < 0) startPos.z--
+        let endPos = new Vec3((startPos.x >= 0) ? startPos.x + 15 : startPos.x - 15, 128, (startPos.z >= 0) ? startPos.z + 15 : startPos.z - 15)
         return {startPos: startPos, endPos: endPos}
     }
 

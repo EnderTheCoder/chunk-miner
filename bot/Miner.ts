@@ -1,7 +1,7 @@
 import {Vec3} from "vec3";
 import {goals, Movements, pathfinder} from "mineflayer-pathfinder";
 
-const mineflayer = require("mineflayer")
+import mineflayer = require("mineflayer")
 import {Bot} from "mineflayer"
 import {Block} from "prismarine-block"
 import BotInventory from "./BotInventory";
@@ -50,13 +50,12 @@ export default class Miner {
     constructor(botData, id) {
 
         this.bot = mineflayer.createBot(botData)
-
         this.bot.on("inject_allowed", () => {
             this.mcData = require("minecraft-data")(this.bot.version)
         })
 
         this.bot.loadPlugin(pathfinder)
-
+        this.bot.
 
         this.bot.once("spawn", async () => {
 
@@ -185,6 +184,8 @@ export default class Miner {
         //     }
         // }
         try {
+            console.log("place is executed")
+
             await this.bot.placeBlock(reference.referenceBlock, reference.faceVector)
         } catch (e) {
             console.warn(e)
@@ -212,11 +213,9 @@ export default class Miner {
         this.state = "moving"
         console.log(this.taskManagerBelongTo.chunk.endPos.x, this.taskManagerBelongTo.chunk.endPos.z)
         const nearGoal = new goals.GoalNearXZ(this.taskManagerBelongTo.chunk.endPos.x, this.taskManagerBelongTo.chunk.endPos.z, 4)
-        // console.log(this.mcData)
         const nearMovement = new Movements(this.bot, this.mcData)
         await this.bot.pathfinder.setMovements(nearMovement)
         await this.bot.pathfinder.goto(nearGoal)
-        console.log("near")
     }
 
     public async handleBlock() {

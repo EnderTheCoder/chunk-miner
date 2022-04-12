@@ -20,7 +20,7 @@ export default class BotInventory {
         let slots = this.getSlot()
         let count = 0
         for (let i = 0; i < slots.length; i++) {
-            if (slots[i] != null && this.contains(slots[i].name, "_pickaxe")) count++
+            if (slots[i] != null && this.contains(slots[i].name, "_pickaxe")) count += slots[i].count
         }
         return count
     }
