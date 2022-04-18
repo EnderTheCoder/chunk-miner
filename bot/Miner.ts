@@ -47,7 +47,7 @@ export default class Miner {
 
     timerID
 
-    constructor(botData, id) {
+    constructor(botData, id, pre_command = "/login password") {
 
         this.bot = mineflayer.createBot(botData)
         this.bot.on("inject_allowed", () => {
@@ -55,16 +55,16 @@ export default class Miner {
         })
 
         this.bot.loadPlugin(pathfinder)
-        this.bot.
 
         this.bot.once("spawn", async () => {
 
             console.log("Bot " + id + " spawned")
 
+            if (pre_command != null) this.bot.chat(pre_command)
 
             this.timerID = setInterval(
                 () => {
-
+                    // console.log(this.state)
                     if (this.state == "preparing") {
                         this.handleBlock()
                     }
@@ -175,7 +175,7 @@ export default class Miner {
     public async fillLiquid() {
 
         let reference = this.findReferencableBlock()
-        let inventory = new BotInventory(this.bot)
+        // let inventory = new BotInventory(this.bot)
 
         // for (let i = 0; i < this.garbageList.length; i++) {
         //     if (inventory.countItem(this.garbageList[i]) > 0) {

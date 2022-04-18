@@ -18,7 +18,12 @@ export default class TaskManager {
 
     }
 
-    public async addMiners(miners: Array<Miner>) {
+    public addMiner(miner: Miner) {
+        this.minerList[this.minerList.length] = miner
+        miner.linkTaskManager(this)
+    }
+
+    public addMiners(miners: Array<Miner>) {
         for (let miner of miners) {
             this.minerList[this.minerList.length] = miner
             miner.linkTaskManager(this)
